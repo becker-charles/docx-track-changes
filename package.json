@@ -1,6 +1,6 @@
 {
 	"name": "docx-track-changes",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Interact with tracked changes in .docx files",
 	"keywords": [
 		"docx",
