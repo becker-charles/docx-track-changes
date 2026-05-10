@@ -11,7 +11,15 @@
 		"tracked"
 	],
 	"license": "MIT",
-	"author": "",
+	"author": "Charles H. Becker",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/becker-charles/docx-track-changes.git"
+	},
+	"bugs": {
+		"url": "https://github.com/becker-charles/docx-track-changes/issues"
+	},
+	"homepage": "https://github.com/becker-charles/docx-track-changes#readme",
 	"type": "module",
 	"main": "dist/index.cjs",
 	"module": "dist/index.js",
