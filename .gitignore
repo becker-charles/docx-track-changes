@@ -1,6 +1,33 @@
-# Claude Code
+# LLM/AI Tools
 .claude/
+.clauderc
+.claude_memory
+.cursorignore
+.cursorrules
+.cursor/
+.aider*
+.continue/
+.codeium/
+.cody/
+.tabnine/
+.codex/
+.copilot/
+.github/copilot/
+.amazonq/
+.aws/codewhisperer/
+.sourcegraph/
+.kite/
+.replit/
+.windsurf/
+.bolt/
 brief.md
+AGENTS.md
+CLAUDE.md
+PROMPT.md
+AI_CONTEXT.md
+.ai/
+ai-context/
+prompts/
 
 # Dependencies
 node_modules/
