@@ -104,6 +104,38 @@ await doc.applyTrackedEdits(
 );
 ```
 
+### Run formatting inheritance
+
+Plain strings in content arrays automatically inherit run-level formatting (font family, font size, color, bold, italic, etc.) from the first run of the original/reference paragraph. This preserves document styling consistency.
+
+```typescript
+// Original paragraph has Arial 14pt red bold text
+// Plain strings inherit that formatting:
+await doc.applyTrackedEdits(
+	[{
+		type: 'replaceParagraph',
+		paraId: para.id,
+		content: ['This text inherits Arial 14pt red bold']
+	}],
+	{ author: 'Editor' }
+);
+
+// Explicit ContentRun formatting overrides inherited:
+await doc.applyTrackedEdits(
+	[{
+		type: 'replaceParagraph',
+		paraId: para.id,
+		content: [
+			'Inherits original formatting ',
+			{ text: 'explicit italic only', italic: true }  // overrides, not bold
+		]
+	}],
+	{ author: 'Editor' }
+);
+```
+
+This behavior applies to `replaceParagraph`, `insertAfter`, and `insertBefore` operations.
+
 ## API
 
 ### `loadTrackable(buffer: Buffer | ArrayBuffer)`

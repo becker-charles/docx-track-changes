@@ -2,7 +2,7 @@ import type { InsertAfterEdit, InsertBeforeEdit, AppliedEdit } from '../types.js
 import type { ParsedXml } from '../readModel/parser.js';
 import { getChildren } from '../readModel/parser.js';
 import { findParagraphById } from './deleteParagraph.js';
-import { wrapParagraphInsert } from '../tracking/wrapInsert.js';
+import { wrapParagraphInsert, extractFirstRunProperties } from '../tracking/wrapInsert.js';
 import { generateChangeId } from '../tracking/changeIds.js';
 import { mintParaId } from '../readModel/ids.js';
 import { cloneElement } from '../tracking/wrapDelete.js';
@@ -69,6 +69,10 @@ export function insertAfter(
 		pPr = [{ 'w:pStyle': [], ':@': { '@_w:val': edit.style } }];
 	}
 
+	// Extract run properties from the first run to inherit for plain strings
+	const refChildren = getChildren(element);
+	const inheritedRPr = extractFirstRunProperties(refChildren);
+
 	// Create the wrapped paragraph
 	const wrappedParagraph = wrapParagraphInsert(
 		edit.content,
@@ -77,7 +81,8 @@ export function insertAfter(
 		date,
 		newParaId,
 		newTextId,
-		pPr
+		pPr,
+		inheritedRPr
 	);
 
 	// Insert after the reference paragraph
@@ -125,6 +130,10 @@ export function insertBefore(
 		pPr = [{ 'w:pStyle': [], ':@': { '@_w:val': edit.style } }];
 	}
 
+	// Extract run properties from the first run to inherit for plain strings
+	const refChildren = getChildren(element);
+	const inheritedRPr = extractFirstRunProperties(refChildren);
+
 	// Create the wrapped paragraph
 	const wrappedParagraph = wrapParagraphInsert(
 		edit.content,
@@ -133,7 +142,8 @@ export function insertBefore(
 		date,
 		newParaId,
 		newTextId,
-		pPr
+		pPr,
+		inheritedRPr
 	);
 
 	// Insert before the reference paragraph

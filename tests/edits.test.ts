@@ -9,6 +9,7 @@ import {
 	createDocWithTable,
 	createLegalDoc,
 	createMixedFormattingDoc,
+	createRichFormattingDoc,
 } from './helpers/createDocx.js';
 
 /**
@@ -1066,5 +1067,209 @@ describe('replaceText', () => {
 		// The replacement text should also be bold
 		expect(outputXml).toContain('critical');
 		expect(outputXml).toContain('w:b');
+	});
+});
+
+describe('run formatting inheritance', () => {
+	beforeEach(() => {
+		resetUsedIds();
+		resetChangeIds();
+	});
+
+	it('should inherit bold formatting in replaceParagraph with plain string', async () => {
+		const buffer = await createMixedFormattingDoc([
+			[{ text: 'Bold original text', bold: true }],
+		]);
+
+		const doc = await loadTrackable(buffer);
+		const para = doc.paragraphs.find(p => p.text.includes('Bold original'));
+		expect(para).toBeDefined();
+
+		const result = await doc.applyTrackedEdits(
+			[{
+				type: 'replaceParagraph',
+				paraId: para!.id,
+				content: ['New plain string text'],
+			}],
+			{ author: 'Test' }
+		);
+
+		expect(result.applied).toHaveLength(1);
+
+		const outputXml = await getDocumentXml(result.buffer);
+		// The new plain string should inherit bold formatting
+		expect(outputXml).toContain('New plain string text');
+		// Check that the w:ins contains a run with w:b
+		const insMatch = outputXml.match(/<w:ins[^>]*>[\s\S]*?<\/w:ins>/);
+		expect(insMatch).toBeDefined();
+		expect(insMatch![0]).toContain('w:b');
+	});
+
+	it('should inherit font and color in replaceParagraph with plain string', async () => {
+		const buffer = await createRichFormattingDoc([
+			[{ text: 'Styled text', font: 'Arial', size: 28, color: 'FF0000' }],
+		]);
+
+		const doc = await loadTrackable(buffer);
+		const para = doc.paragraphs.find(p => p.text.includes('Styled text'));
+		expect(para).toBeDefined();
+
+		const result = await doc.applyTrackedEdits(
+			[{
+				type: 'replaceParagraph',
+				paraId: para!.id,
+				content: ['New styled text'],
+			}],
+			{ author: 'Test' }
+		);
+
+		expect(result.applied).toHaveLength(1);
+
+		const outputXml = await getDocumentXml(result.buffer);
+		// The new text should inherit the run properties
+		const insMatch = outputXml.match(/<w:ins[^>]*>[\s\S]*?<\/w:ins>/);
+		expect(insMatch).toBeDefined();
+		// Should have rPr with font, size, and color
+		expect(insMatch![0]).toContain('w:rFonts');
+		expect(insMatch![0]).toContain('w:sz');
+		expect(insMatch![0]).toContain('w:color');
+	});
+
+	it('should NOT inherit formatting when ContentRun has explicit formatting', async () => {
+		const buffer = await createMixedFormattingDoc([
+			[{ text: 'Bold original', bold: true }],
+		]);
+
+		const doc = await loadTrackable(buffer);
+		const para = doc.paragraphs.find(p => p.text.includes('Bold original'));
+		expect(para).toBeDefined();
+
+		const result = await doc.applyTrackedEdits(
+			[{
+				type: 'replaceParagraph',
+				paraId: para!.id,
+				content: [{ text: 'Italic replacement', italic: true }],
+			}],
+			{ author: 'Test' }
+		);
+
+		expect(result.applied).toHaveLength(1);
+
+		const outputXml = await getDocumentXml(result.buffer);
+		// The new text should have italic but NOT bold (explicit overrides inherited)
+		const insMatch = outputXml.match(/<w:ins[^>]*>[\s\S]*?<\/w:ins>/);
+		expect(insMatch).toBeDefined();
+		expect(insMatch![0]).toContain('w:i');
+		// Should NOT inherit bold from original
+		expect(insMatch![0]).not.toMatch(/<w:b[^a-z]/);
+	});
+
+	it('should inherit formatting in insertAfter with plain string', async () => {
+		const buffer = await createMixedFormattingDoc([
+			[{ text: 'Bold reference paragraph', bold: true }],
+		]);
+
+		const doc = await loadTrackable(buffer);
+		const para = doc.paragraphs.find(p => p.text.includes('Bold reference'));
+		expect(para).toBeDefined();
+
+		const result = await doc.applyTrackedEdits(
+			[{
+				type: 'insertAfter',
+				paraId: para!.id,
+				content: ['Inserted plain text'],
+			}],
+			{ author: 'Test' }
+		);
+
+		expect(result.applied).toHaveLength(1);
+
+		const outputXml = await getDocumentXml(result.buffer);
+		// Find the inserted paragraph's content
+		expect(outputXml).toContain('Inserted plain text');
+		// The inserted text should inherit bold formatting
+		const insMatch = outputXml.match(/<w:ins[^>]*>[\s\S]*?Inserted plain text[\s\S]*?<\/w:ins>/);
+		expect(insMatch).toBeDefined();
+		expect(insMatch![0]).toContain('w:b');
+	});
+
+	it('should inherit formatting in insertBefore with plain string', async () => {
+		const buffer = await createMixedFormattingDoc([
+			[{ text: 'Italic reference paragraph', italic: true }],
+		]);
+
+		const doc = await loadTrackable(buffer);
+		const para = doc.paragraphs.find(p => p.text.includes('Italic reference'));
+		expect(para).toBeDefined();
+
+		const result = await doc.applyTrackedEdits(
+			[{
+				type: 'insertBefore',
+				paraId: para!.id,
+				content: ['Inserted plain text'],
+			}],
+			{ author: 'Test' }
+		);
+
+		expect(result.applied).toHaveLength(1);
+
+		const outputXml = await getDocumentXml(result.buffer);
+		// The inserted text should inherit italic formatting
+		const insMatch = outputXml.match(/<w:ins[^>]*>[\s\S]*?Inserted plain text[\s\S]*?<\/w:ins>/);
+		expect(insMatch).toBeDefined();
+		expect(insMatch![0]).toContain('w:i');
+	});
+
+	it('should handle mixed content with some plain strings and some explicit formatting', async () => {
+		const buffer = await createMixedFormattingDoc([
+			[{ text: 'Bold original', bold: true }],
+		]);
+
+		const doc = await loadTrackable(buffer);
+		const para = doc.paragraphs.find(p => p.text.includes('Bold original'));
+		expect(para).toBeDefined();
+
+		const result = await doc.applyTrackedEdits(
+			[{
+				type: 'replaceParagraph',
+				paraId: para!.id,
+				content: [
+					'Plain inherits bold ',
+					{ text: 'explicit italic', italic: true },
+					' plain also inherits bold',
+				],
+			}],
+			{ author: 'Test' }
+		);
+
+		expect(result.applied).toHaveLength(1);
+
+		const outputXml = await getDocumentXml(result.buffer);
+		// All three runs should be present
+		expect(outputXml).toContain('Plain inherits bold');
+		expect(outputXml).toContain('explicit italic');
+		expect(outputXml).toContain('plain also inherits bold');
+	});
+
+	it('should not crash when original paragraph has no runs', async () => {
+		// Create a paragraph with just paragraph properties but empty content
+		const buffer = await createSimpleDoc(['']);
+
+		const doc = await loadTrackable(buffer);
+		const para = doc.paragraphs[0];
+		expect(para).toBeDefined();
+
+		const result = await doc.applyTrackedEdits(
+			[{
+				type: 'replaceParagraph',
+				paraId: para!.id,
+				content: ['New content'],
+			}],
+			{ author: 'Test' }
+		);
+
+		expect(result.applied).toHaveLength(1);
+		const outputXml = await getDocumentXml(result.buffer);
+		expect(outputXml).toContain('New content');
 	});
 });

@@ -3,7 +3,7 @@ import type { ParsedXml } from '../readModel/parser.js';
 import { getChildren } from '../readModel/parser.js';
 import { findParagraphById } from './deleteParagraph.js';
 import { wrapParagraphContentForDelete, cloneElement } from '../tracking/wrapDelete.js';
-import { wrapInsert } from '../tracking/wrapInsert.js';
+import { wrapInsert, extractFirstRunProperties } from '../tracking/wrapInsert.js';
 import { generateChangeId } from '../tracking/changeIds.js';
 
 /**
@@ -59,6 +59,9 @@ export function replaceParagraph(
 		}
 	}
 
+	// Extract run properties from the first run to inherit for plain strings
+	const inheritedRPr = extractFirstRunProperties(children);
+
 	// Wrap old content in w:del (if there's content to delete)
 	if (runsToDelete.length > 0) {
 		const delChangeId = generateChangeId();
@@ -68,9 +71,9 @@ export function replaceParagraph(
 		changeIds.push(delChangeId);
 	}
 
-	// Wrap new content in w:ins
+	// Wrap new content in w:ins (with inherited run properties for plain strings)
 	const insChangeId = generateChangeId();
-	const insElement = wrapInsert(edit.content, insChangeId, author, date);
+	const insElement = wrapInsert(edit.content, insChangeId, author, date, inheritedRPr);
 	newChildren.push(insElement);
 	changeIds.push(insChangeId);
 

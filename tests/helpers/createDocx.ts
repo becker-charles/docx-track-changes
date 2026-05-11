@@ -320,6 +320,52 @@ export async function createDocWithList(options: {
 }
 
 /**
+ * Extended run options including font properties
+ */
+export interface RichRunOptions {
+	text: string;
+	bold?: boolean;
+	italic?: boolean;
+	underline?: boolean;
+	font?: string;
+	size?: number; // in half-points (e.g., 24 = 12pt)
+	color?: string; // hex color without # (e.g., "FF0000")
+}
+
+/**
+ * Create a document with rich formatting (font, size, color)
+ */
+export async function createRichFormattingDoc(
+	paragraphs: RichRunOptions[][]
+): Promise<Buffer> {
+	const doc = new Document({
+		sections: [
+			{
+				children: paragraphs.map(
+					runs =>
+						new Paragraph({
+							children: runs.map(
+								run =>
+									new TextRun({
+										text: run.text,
+										bold: run.bold,
+										italics: run.italic,
+										underline: run.underline ? {} : undefined,
+										font: run.font,
+										size: run.size,
+										color: run.color,
+									})
+							),
+						})
+				),
+			},
+		],
+	});
+
+	return Buffer.from(await Packer.toBuffer(doc));
+}
+
+/**
  * Create a legal-style document (common use case)
  */
 export async function createLegalDoc(options: {
